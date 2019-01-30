@@ -21,7 +21,7 @@ class RandomPlayPolicy(Policy):
 
     DEFAULT_ACTION = 'random_walk'
     hero_list = ['bailixuance', 'dunshan', 'laofuzi', 'lianpo',
-                 'caocao','daqiao','mozi','change','miyue','sunbin',]
+                 'daqiao','mozi','change','miyue','sunbin',]
     finished = []
 
     SAVE_PATH = 'finished.json'

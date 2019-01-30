@@ -5,57 +5,15 @@ import logging
 import subprocess
 from io import BytesIO
 from adb.client import Client as AdbClient
+import glob
+from ImagePicker import ACTION_IMAGE_PICKER, HERO_IMG_PICKER
+from parameters import *
+
 client = AdbClient(host="127.0.0.1", port=5037)
 
 device = client.devices()[0]
 
 baseline = {}
-
-SCREEN_PATH = 'screen.png'
-
-hero_anchor = (10, 134, 5)
-
-tap_cords = {
-    'restart': (1000, 635, 1170, 690),
-    'continue': (560, 630, 720, 657),
-    'start': (880,  555, 1035, 611),
-    'skip0': (1190, 12, 1260, 45),
-    'skip1': (1190, 12, 1260, 45),
-    'exit': (1153, 43, 1264, 93,),
-    'start_match': (630, 574, 822, 630),
-    'return_room': (661, 638, 812, 684),
-    'confirm': (572, 168, 709, 198),
-    'match_continue': (542, 635, 739, 690),
-    'recover': (710, 619, 757, 671),
-    'pick_hero': (1104, 655, 1267, 712),
-    'check_finished': (435, 442, 557, 462),
-    'confirm_hero': (1103, 658, 1266, 713)
-    # 'expand_hero': (459, 483,494,602)
-}
-
-tap_only_cords = {
-    'add_skill0': (860, 540, 900, 580),
-    'add_skill1': (940, 409, 980, 449),
-    'add_skill2': (1067, 331, 1107, 371),
-    'buy_item': (1205, 95, 1255, 137)
-}
-
-
-# x, y, width, dura_start, dura_end - dura_start, 从点 x,y 随机方向滑动width，持续时间随机
-swipe_cords = {
-    'random_walk': (220, 570, 130, 3000, 8000),
-    'skill0':(943, 586, 85, 100, 400),
-    'skill1':(1030, 500, 85, 100, 400),
-    'skill2':(1121, 397, 85, 100, 400),
-}
-
-threshold = 10
-ACTIONS = tap_cords.keys()
-
-# 屏幕分辨率
-device_x, device_y = 1280, 720
-base_x, base_y = 1280, 720
-
 
 def init():
     find_screen_size()
@@ -78,8 +36,13 @@ def tap_center(top_left, bottom_right):
 
 
 def tap_by_name(name):
-    top_left = tap_cords[name][:2]
-    bottom_right = tap_cords[name][2:]
+    try:
+        cord = tap_cords[name]
+    except KeyError as e:
+        cord = tap_only_cords[name]
+
+    top_left = cord[:2]
+    bottom_right = cord[2:]
     tap_center(top_left, bottom_right)
 
 
@@ -179,5 +142,36 @@ def generate_hero_img():
             frame.crop((x_start, y_start, x_end, y_end)).save("heros1/{}.png".format(j * row_num + i + base))
 
 
+def generate_hero_name_img():
+    frame = pull_screenshot(save_file=True)
+    y = 180
+    h = 138
+    x = 10
+    w = 120
+    row_num = 9
+    col_num = 4
+
+    hero = {}
+
+    if os.path.exists('hero'):
+        for i in glob.glob('hero'):
+            name = os.path.basename(i)[:-4]
+            hero[name] = np.array(Image.open(i))
+
+    for j in range(col_num):
+        for i in range(row_num):
+            x_start = x + i * w
+            y_start = y + j * h
+            y_end = y_start + 100
+            x_end = x_start + 100
+            hero_img = frame.crop((x_start, y_start, x_end, y_end)) #.save("heros1/{}.png".format(j * row_num + i + base))
+
+            name_img = frame.crop((x_start, y_end , x_end, y_end + 25))
+
+            name = HERO_IMG_PICKER.pick(hero_img)
+            if name:
+                name_img.save('img/name/{}.png'.format(name))
+
+
 if __name__ == '__main__':
-    generate_hero_img()
+    generate_hero_name_img()

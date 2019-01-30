@@ -3,14 +3,21 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.feature import match_template
 import glob
-from util import pull_screenshot, SCREEN_PATH, swipe, tap_center, hero_anchor
+from util import pull_screenshot, SCREEN_PATH, swipe, tap_center, hero_anchor, tap_by_name
 import time
 from pypinyin import pinyin
+import logging
+from PIL import Image
+
 
 OPENCV = 0
 SKIMAGE = 1
 
 lib = OPENCV
+
+
+def get_hero_img(name):
+    return 'img/name/{}.png'.format(name)
 
 
 def match_template1(template, img, plot=False, method=cv2.TM_SQDIFF_NORMED):
@@ -60,9 +67,14 @@ def test():
         match_template1(template,'hero1.png',plot=True, method=eval(method))
 
 
-def valid_hero_location(top_left):
-    left = top_left[0]
-    if abs(left - hero_anchor[0]) < hero_anchor[2] or abs(left - hero_anchor[1]) < hero_anchor[2]:
+def valid_hero(name, img, top_left, bottom_right, threshold=10):
+
+    hero_img = np.array(Image.open(get_hero_img(name)))
+    crop_img = np.array(img.crop((*top_left, *bottom_right)))
+
+    err = np.sum(hero_img - crop_img) / hero_img.size
+
+    if err < threshold:
         return True
     return False
 
@@ -75,17 +87,20 @@ def swipe_hero(reverse=False):
 
 
 def chose_hero(name, reverse=False):
-    template = 'img/hero/{}.png'.format(name)
+    template = get_hero_img(name)
+
+    logging.debug('ACTION: expand_hero')
+    tap_by_name('expand_hero')
 
     now = time.time()
     while True:
-        pull_screenshot(save_file=True)
-        top_left, bottom_right = match_template1(template, SCREEN_PATH)
-        valid = valid_hero_location(top_left)
+        img = pull_screenshot(save_file=True)
+        top_left, bottom_right = match_template1(template, SCREEN_PATH, plot=True)
+        valid = valid_hero(name, img, top_left, bottom_right)
         if valid :
             break
 
-        if time.time() - now > 30:
+        if time.time() - now > 40:
             return False
         swipe_hero(reverse=reverse)
 
